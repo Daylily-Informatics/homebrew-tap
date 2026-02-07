@@ -25,8 +25,14 @@ class Wwk < Formula
     <<~EOS
       wwk is the CLI and wwkd is the background agent for WellWhaddyaKnow.
 
-      Start the agent:
-        wwkd &
+      Install agent as login item (starts automatically at login):
+        wwk agent install
+
+      Agent management:
+        wwk agent status    # Show agent status
+        wwk agent start     # Start agent
+        wwk agent stop      # Stop agent
+        wwk agent uninstall # Remove login item
 
       Usage:
         wwk status          # Show current status
@@ -34,10 +40,8 @@ class Wwk < Formula
         wwk week            # This week's summary
         wwk --help          # Full command reference
 
-      For the menu bar UI, build WellWhaddyaKnow.app from source:
-        git clone https://github.com/Daylily-Informatics/well-whaddya-know.git
-        cd well-whaddya-know && bash scripts/build-app.sh --release
-        open .build/release/WellWhaddyaKnow.app
+      For the menu bar GUI app:
+        brew install --cask daylily-informatics/tap/wellwhaddyaknow
     EOS
   end
 
@@ -46,4 +50,3 @@ class Wwk < Formula
     assert_match "USAGE: wwk", shell_output("#{bin}/wwk --help")
   end
 end
-
