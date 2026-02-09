@@ -1,6 +1,6 @@
 cask "wellwhaddyaknow" do
-  version "0.4.0"
-  sha256 "2038eaeb98158fd27f2b1d918dcefec7e601de4e538afbc5fe0c0bad52c892af"
+  version "0.4.1"
+  sha256 "7a5604cd12c4f270b01cab7af17837c848c0cccca795ccc56f4cad004a5df7f2"
 
   url "https://github.com/Daylily-Informatics/well-whaddya-know/releases/download/#{version}/WellWhaddyaKnow-#{version}.zip"
   name "WellWhaddyaKnow"
