@@ -23,47 +23,40 @@ class Wwk < Formula
       }
     SWIFT
 
-    # Swift 6 new build system may remove previous binaries when
-    # building a different --product.  Run the entire build-and-stage
-    # pipeline in a single shell invocation so nothing interferes.
-    staging = buildpath/"staged_binaries"
-    staging.mkpath
-
-    system "sh", "-c", <<~SH
-      set -e
-      FLAGS="--configuration release --disable-sandbox -Xswiftc -cross-module-optimization"
-
-      swift build $FLAGS --product wwk
-      BP=$(swift build --show-bin-path --configuration release)
-      cp "$BP/wwk" "#{staging}/"
-
-      swift build $FLAGS --product wwkd
-      cp "$BP/wwkd" "#{staging}/"
-
-      swift build $FLAGS --product WellWhaddyaKnow
-      cp "$BP/WellWhaddyaKnow" "#{staging}/"
-
-      echo "--- staged_binaries ---"
-      ls -la "#{staging}/"
-    SH
-
-    # Install CLI and agent binaries
-    bin.install staging/"wwk"
-    bin.install staging/"wwkd"
-
-    # Construct WellWhaddyaKnow.app bundle
+    # Construct paths for the app bundle up front so the shell
+    # script can install binaries directly to their final locations.
     app_bundle = prefix/"WellWhaddyaKnow.app"
     contents   = app_bundle/"Contents"
     macos_dir  = contents/"MacOS"
     resources  = contents/"Resources"
     la_dir     = contents/"Library/LaunchAgents"
 
+    bin.mkpath
     macos_dir.mkpath
     resources.mkpath
     la_dir.mkpath
 
-    cp staging/"WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
-    cp staging/"wwkd",            macos_dir/"wwkd"
+    # Swift 6 new build system may remove previous binaries when
+    # building a different --product.  Build each product and install
+    # immediately within a single shell invocation.
+    system "sh", "-c", <<~SH
+      set -e
+      FLAGS="--configuration release --disable-sandbox -Xswiftc -cross-module-optimization"
+
+      swift build $FLAGS --product wwk
+      BP=$(swift build --show-bin-path --configuration release)
+      install -m 755 "$BP/wwk" "#{bin}/"
+
+      swift build $FLAGS --product wwkd
+      install -m 755 "$BP/wwkd" "#{bin}/"
+      install -m 755 "$BP/wwkd" "#{macos_dir}/"
+
+      swift build $FLAGS --product WellWhaddyaKnow
+      install -m 755 "$BP/WellWhaddyaKnow" "#{macos_dir}/"
+
+      echo "--- installed ---"
+      ls -la "#{bin}/wwk" "#{bin}/wwkd" "#{macos_dir}/WellWhaddyaKnow" "#{macos_dir}/wwkd"
+    SH
 
     # Embed launchd plist (required for SMAppService)
     cp "Sources/WellWhaddyaKnowApp/LaunchAgents/com.daylily.wellwhaddyaknow.agent.plist",
