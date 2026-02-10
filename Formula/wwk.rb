@@ -23,28 +23,29 @@ class Wwk < Formula
       }
     SWIFT
 
-    # Swift 6 / new build system only outputs the product you ask for.
-    # Build each executable product explicitly so all three land in the
-    # bin-path directory.
+    # Swift 6 / new build system replaces the output binary on each
+    # --product build.  Build each product and immediately stage it
+    # before the next build overwrites the output directory.
     swift_flags = %w[
       --configuration release
       --disable-sandbox
       -Xswiftc -cross-module-optimization
     ]
-    system "swift", "build", *swift_flags, "--product", "wwk"
-    system "swift", "build", *swift_flags, "--product", "wwkd"
-    system "swift", "build", *swift_flags, "--product", "WellWhaddyaKnow"
 
-    # Resolve the actual bin path — SPM may use a triple-specific directory
-    # (e.g. .build/arm64-apple-macosx/release) and the .build/release symlink
-    # does not always resolve correctly inside Homebrew's build sandbox.
-    bin_path = Utils.safe_popen_read(
-      "swift", "build", "--show-bin-path", "--configuration", "release"
-    ).chomp
+    staging = buildpath/"staged_binaries"
+    staging.mkpath
+
+    %w[wwk wwkd WellWhaddyaKnow].each do |product|
+      system "swift", "build", *swift_flags, "--product", product
+      bp = Utils.safe_popen_read(
+        "swift", "build", "--show-bin-path", "--configuration", "release"
+      ).chomp
+      cp "#{bp}/#{product}", staging/product
+    end
 
     # Install CLI and agent binaries
-    bin.install "#{bin_path}/wwk"
-    bin.install "#{bin_path}/wwkd"
+    bin.install staging/"wwk"
+    bin.install staging/"wwkd"
 
     # Construct WellWhaddyaKnow.app bundle
     app_bundle = prefix/"WellWhaddyaKnow.app"
@@ -57,8 +58,8 @@ class Wwk < Formula
     resources.mkpath
     la_dir.mkpath
 
-    cp "#{bin_path}/WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
-    cp "#{bin_path}/wwkd",            macos_dir/"wwkd"
+    cp staging/"WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
+    cp staging/"wwkd",            macos_dir/"wwkd"
 
     # Embed launchd plist (required for SMAppService)
     cp "Sources/WellWhaddyaKnowApp/LaunchAgents/com.daylily.wellwhaddyaknow.agent.plist",
