@@ -29,9 +29,16 @@ class Wwk < Formula
            "--disable-sandbox",
            "-Xswiftc", "-cross-module-optimization"
 
+    # Resolve the actual bin path — SPM may use a triple-specific directory
+    # (e.g. .build/arm64-apple-macosx/release) and the .build/release symlink
+    # does not always resolve correctly inside Homebrew's build sandbox.
+    bin_path = Utils.safe_popen_read(
+      "swift", "build", "--show-bin-path", "--configuration", "release"
+    ).chomp
+
     # Install CLI and agent binaries
-    bin.install ".build/release/wwk"
-    bin.install ".build/release/wwkd"
+    bin.install "#{bin_path}/wwk"
+    bin.install "#{bin_path}/wwkd"
 
     # Construct WellWhaddyaKnow.app bundle
     app_bundle = prefix/"WellWhaddyaKnow.app"
@@ -44,8 +51,8 @@ class Wwk < Formula
     resources.mkpath
     la_dir.mkpath
 
-    cp ".build/release/WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
-    cp ".build/release/wwkd",            macos_dir/"wwkd"
+    cp "#{bin_path}/WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
+    cp "#{bin_path}/wwkd",            macos_dir/"wwkd"
 
     # Embed launchd plist (required for SMAppService)
     cp "Sources/WellWhaddyaKnowApp/LaunchAgents/com.daylily.wellwhaddyaknow.agent.plist",
@@ -60,7 +67,7 @@ class Wwk < Formula
     cp "Sources/WellWhaddyaKnowApp/PrivacyInfo.xcprivacy", resources/"PrivacyInfo.xcprivacy"
     (contents/"PkgInfo").write("APPL????")
 
-    # Ad-hoc codesign (inner → outer)
+    # Ad-hoc codesign (inner then outer)
     system "codesign", "--force", "--sign", "-",
            "-i", "com.daylily.wellwhaddyaknow.agent",
            macos_dir/"wwkd"
@@ -100,4 +107,3 @@ class Wwk < Formula
     assert_match "gui", shell_output("#{bin}/wwk --help")
   end
 end
-
