@@ -23,29 +23,27 @@ class Wwk < Formula
       }
     SWIFT
 
-    # Swift 6 / new build system replaces the output binary on each
-    # --product build.  Build each product and immediately stage it
-    # before the next build overwrites the output directory.
+    # Swift 6 / new build system requires --product to place each
+    # executable in the output directory.  Build all three products,
+    # then resolve the bin path and install.
     swift_flags = %w[
       --configuration release
       --disable-sandbox
       -Xswiftc -cross-module-optimization
     ]
+    system "swift", "build", *swift_flags, "--product", "wwk"
+    system "swift", "build", *swift_flags, "--product", "wwkd"
+    system "swift", "build", *swift_flags, "--product", "WellWhaddyaKnow"
 
-    staging = buildpath/"staged_binaries"
-    staging.mkpath
-
-    %w[wwk wwkd WellWhaddyaKnow].each do |product|
-      system "swift", "build", *swift_flags, "--product", product
-      bp = Utils.safe_popen_read(
-        "swift", "build", "--show-bin-path", "--configuration", "release"
-      ).chomp
-      cp "#{bp}/#{product}", staging/product
-    end
+    # Resolve the actual bin path (triple-specific, e.g.
+    # .build/arm64-apple-macosx/release).
+    bin_path = Utils.safe_popen_read(
+      "swift", "build", "--show-bin-path", "--configuration", "release"
+    ).chomp
 
     # Install CLI and agent binaries
-    bin.install staging/"wwk"
-    bin.install staging/"wwkd"
+    bin.install "#{bin_path}/wwk"
+    bin.install "#{bin_path}/wwkd"
 
     # Construct WellWhaddyaKnow.app bundle
     app_bundle = prefix/"WellWhaddyaKnow.app"
@@ -58,8 +56,8 @@ class Wwk < Formula
     resources.mkpath
     la_dir.mkpath
 
-    cp staging/"WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
-    cp staging/"wwkd",            macos_dir/"wwkd"
+    cp "#{bin_path}/WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
+    cp "#{bin_path}/wwkd",            macos_dir/"wwkd"
 
     # Embed launchd plist (required for SMAppService)
     cp "Sources/WellWhaddyaKnowApp/LaunchAgents/com.daylily.wellwhaddyaknow.agent.plist",
