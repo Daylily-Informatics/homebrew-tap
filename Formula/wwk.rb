@@ -23,41 +23,29 @@ class Wwk < Formula
       }
     SWIFT
 
-    # Swift 6 new build system only keeps the last --product binary
-    # in the output directory.  Build each product and immediately
-    # move it to a staging area using shell cp (Homebrew's Ruby cp
-    # does not execute between system calls in a loop).
-    swift_flags = "--configuration release --disable-sandbox -Xswiftc -cross-module-optimization"
-
+    # Swift 6 new build system may remove previous binaries when
+    # building a different --product.  Run the entire build-and-stage
+    # pipeline in a single shell invocation so nothing interferes.
     staging = buildpath/"staged_binaries"
     staging.mkpath
 
-    # Build wwk, stage it
-    system "swift", "build",
-           "--configuration", "release",
-           "--disable-sandbox",
-           "-Xswiftc", "-cross-module-optimization",
-           "--product", "wwk"
-    bp = Utils.safe_popen_read(
-      "swift", "build", "--show-bin-path", "--configuration", "release"
-    ).chomp
-    system "cp", "#{bp}/wwk", staging.to_s
+    system "sh", "-c", <<~SH
+      set -e
+      FLAGS="--configuration release --disable-sandbox -Xswiftc -cross-module-optimization"
 
-    # Build wwkd, stage it
-    system "swift", "build",
-           "--configuration", "release",
-           "--disable-sandbox",
-           "-Xswiftc", "-cross-module-optimization",
-           "--product", "wwkd"
-    system "cp", "#{bp}/wwkd", staging.to_s
+      swift build $FLAGS --product wwk
+      BP=$(swift build --show-bin-path --configuration release)
+      cp "$BP/wwk" "#{staging}/"
 
-    # Build WellWhaddyaKnow, stage it
-    system "swift", "build",
-           "--configuration", "release",
-           "--disable-sandbox",
-           "-Xswiftc", "-cross-module-optimization",
-           "--product", "WellWhaddyaKnow"
-    system "cp", "#{bp}/WellWhaddyaKnow", staging.to_s
+      swift build $FLAGS --product wwkd
+      cp "$BP/wwkd" "#{staging}/"
+
+      swift build $FLAGS --product WellWhaddyaKnow
+      cp "$BP/WellWhaddyaKnow" "#{staging}/"
+
+      echo "--- staged_binaries ---"
+      ls -la "#{staging}/"
+    SH
 
     # Install CLI and agent binaries
     bin.install staging/"wwk"
