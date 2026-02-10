@@ -23,27 +23,45 @@ class Wwk < Formula
       }
     SWIFT
 
-    # Swift 6 / new build system requires --product to place each
-    # executable in the output directory.  Build all three products,
-    # then resolve the bin path and install.
-    swift_flags = %w[
-      --configuration release
-      --disable-sandbox
-      -Xswiftc -cross-module-optimization
-    ]
-    system "swift", "build", *swift_flags, "--product", "wwk"
-    system "swift", "build", *swift_flags, "--product", "wwkd"
-    system "swift", "build", *swift_flags, "--product", "WellWhaddyaKnow"
+    # Swift 6 new build system only keeps the last --product binary
+    # in the output directory.  Build each product and immediately
+    # move it to a staging area using shell cp (Homebrew's Ruby cp
+    # does not execute between system calls in a loop).
+    swift_flags = "--configuration release --disable-sandbox -Xswiftc -cross-module-optimization"
 
-    # Resolve the actual bin path (triple-specific, e.g.
-    # .build/arm64-apple-macosx/release).
-    bin_path = Utils.safe_popen_read(
+    staging = buildpath/"staged_binaries"
+    staging.mkpath
+
+    # Build wwk, stage it
+    system "swift", "build",
+           "--configuration", "release",
+           "--disable-sandbox",
+           "-Xswiftc", "-cross-module-optimization",
+           "--product", "wwk"
+    bp = Utils.safe_popen_read(
       "swift", "build", "--show-bin-path", "--configuration", "release"
     ).chomp
+    system "cp", "#{bp}/wwk", staging.to_s
+
+    # Build wwkd, stage it
+    system "swift", "build",
+           "--configuration", "release",
+           "--disable-sandbox",
+           "-Xswiftc", "-cross-module-optimization",
+           "--product", "wwkd"
+    system "cp", "#{bp}/wwkd", staging.to_s
+
+    # Build WellWhaddyaKnow, stage it
+    system "swift", "build",
+           "--configuration", "release",
+           "--disable-sandbox",
+           "-Xswiftc", "-cross-module-optimization",
+           "--product", "WellWhaddyaKnow"
+    system "cp", "#{bp}/WellWhaddyaKnow", staging.to_s
 
     # Install CLI and agent binaries
-    bin.install "#{bin_path}/wwk"
-    bin.install "#{bin_path}/wwkd"
+    bin.install staging/"wwk"
+    bin.install staging/"wwkd"
 
     # Construct WellWhaddyaKnow.app bundle
     app_bundle = prefix/"WellWhaddyaKnow.app"
@@ -56,8 +74,8 @@ class Wwk < Formula
     resources.mkpath
     la_dir.mkpath
 
-    cp "#{bin_path}/WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
-    cp "#{bin_path}/wwkd",            macos_dir/"wwkd"
+    cp staging/"WellWhaddyaKnow", macos_dir/"WellWhaddyaKnow"
+    cp staging/"wwkd",            macos_dir/"wwkd"
 
     # Embed launchd plist (required for SMAppService)
     cp "Sources/WellWhaddyaKnowApp/LaunchAgents/com.daylily.wellwhaddyaknow.agent.plist",
