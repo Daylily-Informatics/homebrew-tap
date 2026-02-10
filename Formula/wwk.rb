@@ -23,11 +23,17 @@ class Wwk < Formula
       }
     SWIFT
 
-    # Build all products (wwk, wwkd, WellWhaddyaKnow)
-    system "swift", "build",
-           "--configuration", "release",
-           "--disable-sandbox",
-           "-Xswiftc", "-cross-module-optimization"
+    # Swift 6 / new build system only outputs the product you ask for.
+    # Build each executable product explicitly so all three land in the
+    # bin-path directory.
+    swift_flags = %w[
+      --configuration release
+      --disable-sandbox
+      -Xswiftc -cross-module-optimization
+    ]
+    system "swift", "build", *swift_flags, "--product", "wwk"
+    system "swift", "build", *swift_flags, "--product", "wwkd"
+    system "swift", "build", *swift_flags, "--product", "WellWhaddyaKnow"
 
     # Resolve the actual bin path — SPM may use a triple-specific directory
     # (e.g. .build/arm64-apple-macosx/release) and the .build/release symlink
