@@ -4,8 +4,8 @@
 class Wwk < Formula
   desc "macOS time tracker — CLI, background agent, and menu bar app"
   homepage "https://github.com/Daylily-Informatics/well-whaddya-know"
-  url "https://github.com/Daylily-Informatics/well-whaddya-know/archive/refs/tags/0.6.2.tar.gz"
-  sha256 "e189095eefad70c5e418cf72e99b4704420052d1e159c4d70977f5476347981b"
+  url "https://github.com/Daylily-Informatics/well-whaddya-know/archive/refs/tags/0.7.0.tar.gz"
+  sha256 "0d86579202a74d41bac6ed3b8ede890ef3d40d55550897b0d8914c959708c8b4"
   license "MIT"
   head "https://github.com/Daylily-Informatics/well-whaddya-know.git", branch: "main"
 
