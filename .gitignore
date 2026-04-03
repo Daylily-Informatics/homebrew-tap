@@ -1,0 +1,9 @@
+# TLS material
+certs/
+tls/
+ssl/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
